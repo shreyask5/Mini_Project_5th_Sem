@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Monitoring System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+    <header>
+        <h1>Driver Monitoring System</h1>
+    </header>
+    <div class="container">
+        <div class="video-feed">
+            <!-- Ensure the src attribute points to the correct route -->
+            <img src="{{ url_for('video_feed') }}" alt="Video Feed" id="video-feed">
+        </div>
+        <div id="boxes">
+            <div class="status-box boxb">
+                <h2>Status:</h2>
+                <p id="status-text">Active</p>
+            </div>
+            <div class="alert-box boxb" id="alert-box">
+                <h2>Alert</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio for alerts -->
+    <audio id="alert-sound" src="{{ url_for('static', filename='alert.mp3') }}"></audio>
+
+    <!-- Button to enable audio -->
+    <button id="enable-audio" onclick="enableAudio()">Enable Audio</button>
+
+    <script>
+        let audioEnabled = false;
+
+        // Function to enable audio (required for autoplay in modern browsers)
+        function enableAudio() {
+            const alertSound = document.getElementById('alert-sound');
+            alertSound.play().then(() => {
+                alertSound.pause(); // Preload the audio and pause
+                alertSound.currentTime = 0; // Reset sound
+                audioEnabled = true;
+                document.getElementById('enable-audio').style.display = 'none'; // Hide the button
+            }).catch(error => {
+                console.error("Error enabling audio:", error);
+            });
+        }
+
+        // Function to update the status and trigger alerts
+        function updateStatus() {
+            if (!audioEnabled) return; // Prevent sound from playing if audio is not enabled
+
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    const statusText = document.getElementById('status-text');
+                    const alertBox = document.getElementById('alert-box');
+                    const alertSound = document.getElementById('alert-sound');
+
+                    // Update status text
+                    statusText.textContent = data.status;
+
+                    // Update alert box and sound
+                    if (["Driver Drowsy!", "Head Up!", "Head Down!", "Yawning!", "Phone in Use!"].includes(data.status)) {
+                        alertBox.style.backgroundColor = "#ffcdd2"; // Red color for alerts
+                        alertSound.play(); // Play alert sound
+                    } else {
+                        alertBox.style.backgroundColor = "#e0f7fa"; // Default color
+                        alertSound.pause(); // Stop sound
+                        alertSound.currentTime = 0; // Reset sound
+                    }
+                });
+        }
+
+        // Update status every second
+        setInterval(updateStatus, 1000);
+
+        // Check if the video feed is loaded
+        const videoFeed = document.getElementById('video-feed');
+        videoFeed.onerror = function() {
+            console.error("Error loading video feed.");
+            videoFeed.src = "{{ url_for('video_feed') }}"; // Try to reload the video feed
+        };
+    </script>
+</body>
+
+</html>
